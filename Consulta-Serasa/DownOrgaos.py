@@ -17,67 +17,64 @@ def scpcBaixada(filename):
     scpc.clickElement('//*[@id="menu_principal_spcn"]')
     scpc.clickElement('//*[@id="sm02_SPCN"]/a')
     scpc.entryIframe('//*[@id="menu_vertical"]')
-    scpc.clickElement('//*[@id="esquerda_menu"]/ul[7]/li[1]/form/a')
-    scpc.exitIframe()
+    listclients = pd.read_excel(filename)
+    cards = listclients['Cartões']
+    for card in cards:
+        cpf = str(listclients.loc[listclients['Cartões'] == card, 'Cpf'].values[0]).strip('.').lstrip('0')
 
-    scpc.entryIframe('//*[@id="Tela"]')
-    scpc.clickElement('//*[@id="todoform"]/tbody/tr[2]/td[2]/input[2]')
-    scpc.entryWindow()
-    scpc.entryIframe('//*[@id="pform3"]')
+        t = 11 - len(cpf)
+        cpf = f'{'0' * t}{cpf}'
 
-    list = scpc.getListElement(By.XPATH, '/html/body/table/tbody')
+        scpc.exitIframe()
+        scpc.entryIframe('//*[@id="menu_vertical"]')
+        scpc.clickElement('//*[@id="form_001"]/a')
+        scpc.exitIframe()
 
-    arquivo_ret = filename
-    patch_home = Path.home()
-    download = patch_home / "Downloads"
-    arquivodiretory = download / arquivo_ret
-
-    for txt in list:
-        files = txt.find_elements(By.XPATH, f'/html/body/table/tbody/tr')
-        for file in files:
-            tds = str(file.find_element(By.XPATH, './td[1]').text).strip()
-            if tds.upper() == arquivo_ret.upper():
-                file.find_element(By.XPATH, './td[4]').click()
-                print('Encontrado')
-                while True:
-                    if et.verificyExistFile(arquivo_ret):
-                        break
-                    sleep(5)
+        while True:
+            try:
+                scpc.entryIframe('//*[@id="TelaNovo"]')
+                scpc.loadingElement('//*[@id="cpf"]', 5)
+                scpc.web.find_element(By.XPATH, '//*[@id="cpf"]').send_keys(cpf)
                 break
-
-    scpc.closeWindow()
-    scpc.exitWindow()
-
-    with open(arquivodiretory, 'r') as file:
-        for row in file:
-            if row[371:379].strip() != 'EXCLUSAO' and row[371:379].strip() != '':
-                cpf = row[59:70].strip()
-                card = row[316:338].strip()
+            except:
                 scpc.exitIframe()
                 scpc.entryIframe('//*[@id="menu_vertical"]')
                 scpc.clickElement('//*[@id="form_001"]/a')
                 scpc.exitIframe()
+                sleep(2)
 
-                scpc.entryIframe('//*[@id="TelaNovo"]')
-                scpc.writeText('//*[@id="cpf"]', cpf)
-                scpc.clickElement('//*[@id="btn_pesquisar"]')
+        scpc.clickElement('//*[@id="btn_pesquisar"]')
 
-                incluso = scpc.getListElement(By.XPATH, '//*[@id="tbl_fis"]/tbody/tr')
+        incluso = scpc.getListElement(By.XPATH, '//*[@id="tbl_fis"]/tbody/tr')
 
-                for i in incluso:
-                    if str(i.text) == 'Nenhum registro encontrado':
-                        print(f"Cliente {cpf}, não possui restrição")
-                        continue
-                    td = i.find_element(By.XPATH, './td[5]').text
-                    if len(td.strip()) == 14:
-                        cardinc = td.strip()
-                    else:
-                        cardinc = td.strip().lstrip('0')
-                        card = card.lstrip('0')
-                    if cardinc == card:
-                        i.find_element(By.XPATH, './td[9]').click()
-                        scpc.clickElement('//*[@id="btn_excluir"]')
+        for i in incluso:
+            if str(i.text) == 'Nenhum registro encontrado':
+                print(f"Cliente {cpf}, não possui restrição")
+                continue
+            td = i.find_element(By.XPATH, './td[5]').text
+            if len(td.strip()) == 14:
+                cardinc = td.strip()
+            else:
+                cardinc = td.strip().lstrip('0')
+                card = card.lstrip('0')
+            if cardinc == card:
+                i.find_element(By.XPATH, './td[9]').click()
+                scpc.clickElement('//*[@id="btn_excluir"]')
+                scpc.clickElement('/html/body/div[3]/div/div[3]/button[1]')
+                sleep(4)
+                try:
+                    scpc.loadingElement('/html/body/div[3]/div/div[2]', 10)
+                    regs = str(scpc.web.find_element(By.XPATH, '/html/body/div[3]/div/div[2]').text).strip()
+                    print(regs)
+                    if 'EXCLUSAO NAO PERMITIDA, REGISTRO SUSPENSO' in regs:
                         scpc.clickElement('/html/body/div[3]/div/div[1]/button')
+                        element_value = scpc.web.find_element(By.ID, 'valor')
+                        element_name = scpc.web.find_element(By.ID, 'nome')
+                        valor = element_value.get_attribute('value')
+                        nome = element_name.get_attribute('value')
+                        print(valor, nome)
+                except:
+                    sleep(2)
 
 def serasaBaixa(filename):
     serasa = isw('https://empresas.serasaexperian.com.br/meus-produtos/login')
@@ -143,7 +140,7 @@ def spcBaixa(filename):
     listclient = pd.read_excel(filename)
     cardlist = listclient['Cartões']
     for cardc in cardlist:
-        cpf = str(clientinexcel.loc[clientinexcel['Cartões'] == cardc, 'Cpf'].values[0]).strip('.').lstrip('0')
+        cpf = str(listclient.loc[listclient['Cartões'] == cardc, 'Cpf'].values[0]).strip('.').lstrip('0')
         spc.clickElement('//*[@id="accordion2"]/li[8]/ul/li/a')
         spc.clickElement('//*[@id="m50"]/div/a')
 
@@ -165,6 +162,8 @@ def spcBaixa(filename):
                     cardTD.click()
                     spc.clickElement('//*[@id="motivoExclusaoRegistro.id"]/option[14]')
                     spc.clickElement('//*[@id="formSPC"]/table[3]/tbody/tr/td/input[2]')
+                    spc.acceptAlert()
+                    sleep(1.5)
 
 
 
@@ -172,9 +171,7 @@ def spcBaixa(filename):
 
 
 
-
-    sleep(15)
-spcBaixa('dwadwda')
+# scpcBaixada(r'C:\Users\fabio.prado\Desktop\Área de Trabalho\cpf.xlsx')
 
 
 

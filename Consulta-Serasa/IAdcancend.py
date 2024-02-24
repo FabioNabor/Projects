@@ -91,6 +91,7 @@ class initSeWeb():
         element = self.web.find_element(By.XPATH, xpatch).send_keys(Keys.ENTER)
 
     def acceptAlert(self):
+        WebDriverWait(self.web, 60).until(EC.alert_is_present())
         alerta = Alert(self.web)
         alerta.accept()
 
