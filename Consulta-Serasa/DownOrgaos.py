@@ -4,34 +4,52 @@ import Excentions as et
 from pathlib import Path
 from time import sleep
 import pandas as pd
-import os
+import SubJudice as sj
+import FileLoad
+
+duser = FileLoad.usersLoading()
 
 def scpcBaixada(filename):
     scpc = isw('https://www.scpc.inf.br/cgi-bin/spcnweb?HTML_PROGRAMA=md000001.int#')
-    #Login
-    scpc.writeText('//*[@id="HTML_COD"]', '36541')
-    scpc.writeText('//*[@id="HTML_SEN"]', '42684258')
+    #FAZENDO LOGIN NO SITE
+    scpc.writeText('//*[@id="HTML_COD"]', duser['ScpcUser'].strip())
+    scpc.writeText('//*[@id="HTML_SEN"]', duser['ScpcPassword'].strip())
     scpc.clickElement('//*[@id="HTML_BOTAO"]')
 
-    #Indo até manutenções
+    #INDO ATÉ A AREA DE MANUTENÇOES
     scpc.clickElement('//*[@id="menu_principal_spcn"]')
     scpc.clickElement('//*[@id="sm02_SPCN"]/a')
+
+    #ACESSANDO O IFRAME
     scpc.entryIframe('//*[@id="menu_vertical"]')
+
+    #ABRINDO EXCEL COM OS CARTÕES
     listclients = pd.read_excel(filename)
     cards = listclients['Cartões']
+
+    #INTERANDO SOBRE CADA CARTÃO
     for card in cards:
         cpf = str(listclients.loc[listclients['Cartões'] == card, 'Cpf'].values[0]).strip('.').lstrip('0')
+        manual = str(listclients.loc[listclients['Cartões'] == card, 'SCPC'].values[0]).strip()
 
+        #CASO O manual RETORNE OUTRO NOME SEM SER MANUAL VAMOS PULAR ESSE CARTÃO
+        if manual != 'MANUAL':
+            continue
+
+        #CORRIGINDO O CPF
         t = 11 - len(cpf)
         cpf = f'{'0' * t}{cpf}'
 
+        #INDO ATÉ PESSOA FISICA PARA REALIZAR CONSULTA
         scpc.exitIframe()
         scpc.entryIframe('//*[@id="menu_vertical"]')
         scpc.clickElement('//*[@id="form_001"]/a')
         scpc.exitIframe()
 
+        #AS VAZES OCORRE ALGUM ERRO QUANDO CLICAMOS EM PESSOA FISICA FIZ UM LOOP PARA REPETIR O PROCESSO ATÉ CONSEGUIR FAZER A CONSULTA
         while True:
             try:
+                #PREENCHENDO O CPF
                 scpc.entryIframe('//*[@id="TelaNovo"]')
                 scpc.loadingElement('//*[@id="cpf"]', 5)
                 scpc.web.find_element(By.XPATH, '//*[@id="cpf"]').send_keys(cpf)
@@ -43,44 +61,58 @@ def scpcBaixada(filename):
                 scpc.exitIframe()
                 sleep(2)
 
+        #CLICANDO PARA REALIZAR A CONSULTA
         scpc.clickElement('//*[@id="btn_pesquisar"]')
 
+        #PEGANDO TODAS RESTRIÇOES QUE O CLIENTE POSSUI
         incluso = scpc.getListElement(By.XPATH, '//*[@id="tbl_fis"]/tbody/tr')
 
         for i in incluso:
+
+            #CASO ELE NÃO TENHA NENHUMA RESTRIÇÃO VAMOS PARA O PROXIMO CARTÃO
             if str(i.text) == 'Nenhum registro encontrado':
                 print(f"Cliente {cpf}, não possui restrição")
                 continue
+
+            #PEGANDO O NUMERO DO CONTRATO INCLUSO
             td = i.find_element(By.XPATH, './td[5]').text
+
             if len(td.strip()) == 14:
                 cardinc = td.strip()
             else:
                 cardinc = td.strip().lstrip('0')
                 card = card.lstrip('0')
+
+            #CASO FOR O CONTRATO QUE QUEREMOS EXCLUIR VAMOS EXCLUIR
             if cardinc == card:
                 i.find_element(By.XPATH, './td[9]').click()
                 scpc.clickElement('//*[@id="btn_excluir"]')
                 scpc.clickElement('/html/body/div[3]/div/div[3]/button[1]')
                 sleep(4)
+
                 try:
                     scpc.loadingElement('/html/body/div[3]/div/div[2]', 10)
                     regs = str(scpc.web.find_element(By.XPATH, '/html/body/div[3]/div/div[2]').text).strip()
                     print(regs)
+
+                    # VERICICANDO SE NÃO É UM CASO DE RESGISTRO SUSPENSO
+                    # CASO FOR VAMOS GERAR O REGISTRO SUSPENSO PARA SER ENVIADO PARA O ÓRGÃO
                     if 'EXCLUSAO NAO PERMITIDA, REGISTRO SUSPENSO' in regs:
                         scpc.clickElement('/html/body/div[3]/div/div[1]/button')
                         element_value = scpc.web.find_element(By.ID, 'valor')
                         element_name = scpc.web.find_element(By.ID, 'nome')
                         valor = element_value.get_attribute('value')
                         nome = element_name.get_attribute('value')
-                        print(valor, nome)
+                        sj.createRegistro(cpf, nome, card, valor)
+
                 except:
                     sleep(2)
 
 def serasaBaixa(filename):
     serasa = isw('https://empresas.serasaexperian.com.br/meus-produtos/login')
     #Login
-    serasa.writeText('//*[@id="loginUser"]', '57729563')
-    serasa.writeText('//*[@id="loginPassword"]', 'M@ya6842')
+    serasa.writeText('//*[@id="loginUser"]', duser['SerasaUser'].strip())
+    serasa.writeText('//*[@id="loginPassword"]', duser['SerasaPassword'].strip())
     serasa.clickElement('//*[@id="loginFormSubmit"]')
 
     serasa.clickElement('//*[@id="mat-mdc-dialog-0"]/div/div/div/mat-dialog-content/div/div[2]/div/a')
@@ -93,6 +125,11 @@ def serasaBaixa(filename):
 
     for card in cards:
         cpf = str(clientinexcel.loc[clientinexcel['Cartões'] == card, 'Cpf'].values[0]).strip('.').lstrip('0')
+        manual = str(clientinexcel.loc[clientinexcel['Cartões'] == card, 'SERASA'].values[0]).strip()
+
+        if manual != 'MANUAL':
+            continue
+
         card = str(card).strip()
 
         t = 11-len(cpf)
@@ -128,10 +165,10 @@ def spcBaixa(filename):
     spc = isw('https://sistema.spc.org.br/spc/controleacesso/autenticacao/entry.action;jsessionid=5ed367a9-15f7-4720-bfca-eff5e8f1875a_node186')
 
     #login
-    spc.writeText('//*[@id="j_username"]', '103584514')
-    spc.writeText('//*[@id="j_password"]', '@Bolinhabranca1012')
+    spc.writeText('//*[@id="j_username"]', duser['SpcUser'].strip())
+    spc.writeText('//*[@id="j_password"]', duser['SpcChave'].strip())
     spc.clickElement('//*[@id="submitButton"]/span')
-    spc.writeText('//*[@id="passphrase"]', '@Bola1012')
+    spc.writeText('//*[@id="passphrase"]', duser['SpcPassword'].strip())
     spc.clickElement('//*[@id="submitButton"]/span')
 
     spc.clickElement('/html/body/section[2]/div/table/tbody/tr[2]/td[2]/div/a/div/figure/img')
@@ -141,6 +178,11 @@ def spcBaixa(filename):
     cardlist = listclient['Cartões']
     for cardc in cardlist:
         cpf = str(listclient.loc[listclient['Cartões'] == cardc, 'Cpf'].values[0]).strip('.').lstrip('0')
+        manual = str(listclient.loc[listclient['Cartões'] == cardc, 'SPC'].values[0]).strip()
+
+        if manual != 'MANUAL':
+            continue
+
         spc.clickElement('//*[@id="accordion2"]/li[8]/ul/li/a')
         spc.clickElement('//*[@id="m50"]/div/a')
 
