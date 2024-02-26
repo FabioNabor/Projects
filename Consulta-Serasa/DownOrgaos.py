@@ -11,7 +11,7 @@ import FileLoad
 
 duser = FileLoad.usersLoading()
 FileLoad.createDiretory()
-MostrarNavegador = False
+MostrarNavegador = True
 
 def scpcBaixa(filename):
     scpc = isw('https://www.scpc.inf.br/cgi-bin/spcnweb?HTML_PROGRAMA=md000001.int#', MostrarNavegador)
@@ -63,7 +63,7 @@ def scpcBaixa(filename):
                 scpc.entryIframe('//*[@id="menu_vertical"]')
                 scpc.clickElement('//*[@id="form_001"]/a')
                 scpc.exitIframe()
-                sleep(2)
+                sleep(5)
 
         #CLICANDO PARA REALIZAR A CONSULTA
         scpc.clickElement('//*[@id="btn_pesquisar"]')
@@ -123,6 +123,7 @@ def scpcBaixa(filename):
     return F'RETORNOS/BAIXA/{filename}'
 
 def serasaBaixa(filename):
+    print("SERASA")
     serasa = isw('https://empresas.serasaexperian.com.br/meus-produtos/login', MostrarNavegador)
     #Login
     serasa.writeText('//*[@id="loginUser"]', duser['SerasaUser'].strip())
@@ -181,6 +182,7 @@ def serasaBaixa(filename):
     clientinexcel.to_excel(filename, index=False)
 
 def spcBaixa(filename):
+    print("Spc-Brasil")
     spc = isw('https://sistema.spc.org.br/spc/controleacesso/autenticacao/entry.action;jsessionid=5ed367a9-15f7-4720-bfca-eff5e8f1875a_node186', MostrarNavegador)
 
     #login
