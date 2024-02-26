@@ -36,11 +36,20 @@ def usersLoading():
                     load.write(f'{d}\n')
                 else:
                     load.write(f'{d} = *******\n')
-        raise Exception('Preencha as informações de Login')
+        raise Exception('Preencha as informações de Login no arquivo Load.txt')
     return informacoes
 
 
+def createDiretory():
+    try:
+        os.makedirs('RETORNOS/BAIXA')
+    except:
+        pass
+    try:
+        os.makedirs('REGISTRO SUSPENSO/Enviar')
+    except:
+        pass
 
 
-usersLoading()
+
 
