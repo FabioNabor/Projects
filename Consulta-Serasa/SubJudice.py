@@ -1,6 +1,7 @@
 import os
 from docx import Document
 import MainApp as mp
+from tkinter import messagebox
 
 # Abrir o documento do Word existente
 
@@ -42,6 +43,11 @@ def getRegistro(diretory):
     return getreturn
 
 if __name__ == "__main__":
-    mp.downRegister()
+    try:
+        mp.downRegister()
+        messagebox.showinfo('DownOrgãos', f'Registros Validados com Sucesso!')
+    except Exception as e:
+        messagebox.showerror('DownOrgãos', f'{e}')
+
 
 

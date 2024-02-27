@@ -72,6 +72,19 @@ def scpcBaixa(filename):
         #PEGANDO TODAS RESTRIÇOES QUE O CLIENTE POSSUI
         incluso = scpc.getListElement(By.XPATH, '//*[@id="tbl_fis"]/tbody/tr')
 
+        result = False
+
+        for row in incluso:
+            listabcard = 0
+            if str(row.text) != 'Nenhum registro encontrado':
+                bcard = str(row.find_element(By.XPATH, './td[3]').text).strip()
+                if 'BRASIL CARD ADM DE CARTAO CREDITO' in bcard:
+                    listabcard +=1
+            else:
+                continue
+            if listabcard > 1:
+                result = True
+
         for i in incluso:
 
             #CASO ELE NÃO TENHA NENHUMA RESTRIÇÃO VAMOS PARA O PROXIMO CARTÃO
@@ -112,10 +125,16 @@ def scpcBaixa(filename):
                         nome = element_name.get_attribute('value')
                         listclients.loc[listclients['N° CARTÃO'] == card, 'SCPC'] = 'REGISTRO SUSPENSO'
                         sj.createRegistro(cpfid, nome, card, valor)
+                        continue
 
                 except:
-                    listclients.loc[listclients['N° CARTÃO'] == card, 'SCPC'] = 'EXCLUSO'
-                    sleep(2)
+                    if result:
+                        listclients.loc[listclients['N° CARTÃO'] == card, 'SCPC'] = 'VERIFICAR'
+                        print('MAIS DE UMA RESTRIÇÃO COM A EMPRESA')
+                        continue
+                    else:
+                        listclients.loc[listclients['N° CARTÃO'] == card, 'SCPC'] = 'EXCLUSO'
+                        sleep(2)
             else:
                 listclients.loc[listclients['N° CARTÃO'] == card, 'SCPC'] = 'VERIFICAR'
 
@@ -168,6 +187,10 @@ def serasaBaixa(filename):
             pass
 
         inclusoes = serasa.getListElement(By.XPATH, '//*[@id="__next"]/main/div/article/div/table/tbody/tr')
+        quantidade = 0
+        for q in inclusoes:
+            td = q.find_element(By.XPATH, './td[3]').text
+            quantidade+=1
 
         for incluso in inclusoes:
             td = incluso.find_element(By.XPATH, './td[3]').text
@@ -176,8 +199,11 @@ def serasaBaixa(filename):
                 serasa.clickElement('//*[@id="modal"]/div[1]/div/div/div[2]/div/div/div[2]/button')
                 serasa.clickElement('/html/body/div[2]/div[1]/div/div/div[2]/form/div[1]/label[13]/input')
                 serasa.clickElement('//*[@id="modal"]/div[1]/div/div/div[2]/form/div[2]/div[2]')
-                print(et.configCard(td))
-                sleep(30)
+                if quantidade > 1:
+                    clientinexcel.loc[clientinexcel['N° CARTÃO'] == card, 'SERASA'] = 'VERIFICAR'
+                else:
+                    clientinexcel.loc[clientinexcel['N° CARTÃO'] == card, 'SERASA'] = 'EXCLUSO'
+                sleep(5)
             else:
                 clientinexcel.loc[clientinexcel['N° CARTÃO'] == card, 'SERASA'] = 'VERIFICAR'
 
@@ -249,7 +275,7 @@ def downRegister():
     diretory = 'Registro Suspenso/Enviados'
     files = os.listdir(diretory)
     if files != []:
-        scpc = isw('https://www.scpc.inf.br/cgi-bin/spcnweb?HTML_PROGRAMA=md000001.int#', False)
+        scpc = isw('https://www.scpc.inf.br/cgi-bin/spcnweb?HTML_PROGRAMA=md000001.int#', True)
         # FAZENDO LOGIN NO SITE
         scpc.writeText('//*[@id="HTML_COD"]', duser['ScpcUser'].strip())
         scpc.writeText('//*[@id="HTML_SEN"]', duser['ScpcPassword'].strip())
@@ -265,8 +291,16 @@ def downRegister():
             diretoryfile = os.path.join(diretory, fileregister)
             fileregister = sj.getRegistro(diretoryfile)
             cpf = fileregister['CPF']
-            contrato = fileregister['CONTRATO']
-            valor = fileregister['VALOR']
+            contrato = str(fileregister['CONTRATO']).strip()
+            valor = str(fileregister['VALOR']).strip()
+            print(fileregister)
+            print(diretoryfile)
+            print(cpf, contrato, valor)
+
+            scpc.exitIframe()
+            scpc.entryIframe('//*[@id="menu_vertical"]')
+            scpc.clickElement('//*[@id="form_001"]/a')
+            scpc.exitIframe()
 
             # AS VAZES OCORRE ALGUM ERRO QUANDO CLICAMOS EM PESSOA FISICA FIZ UM LOOP PARA REPETIR O PROCESSO ATÉ CONSEGUIR FAZER A CONSULTA
             while True:
@@ -274,7 +308,7 @@ def downRegister():
                     # PREENCHENDO O CPF
                     scpc.entryIframe('//*[@id="TelaNovo"]')
                     scpc.loadingElement('//*[@id="cpf"]', 5)
-                    scpc.web.find_element(By.XPATH, '//*[@id="cpf"]').send_keys(cpf)
+                    scpc.web.find_element(By.XPATH, '//*[@id="cpf"]').send_keys(str(cpf).replace('.','').replace('-',''))
                     break
                 except:
                     scpc.exitIframe()
@@ -298,7 +332,7 @@ def downRegister():
 
                 # PEGANDO O NUMERO DO CONTRATO INCLUSO
                 cardelement = i.find_element(By.XPATH, './td[5]').text
-                valueelement = i.find_element(By.XPATH, './td[5]').text
+                valueelement = i.find_element(By.XPATH, './td[7]').text
 
                 # CASO FOR O CONTRATO QUE QUEREMOS EXCLUIR VAMOS EXCLUIR
                 if et.configCard(cardelement) == contrato.strip() and valueelement == valor:
@@ -315,9 +349,11 @@ def downRegister():
                         # CASO FOR VAMOS GERAR O REGISTRO SUSPENSO PARA SER ENVIADO PARA O ÓRGÃO
                         if 'EXCLUSAO NAO PERMITIDA, REGISTRO SUSPENSO' in regs:
                             scpc.clickElement('/html/body/div[3]/div/div[1]/button')
+                            continue
                     except:
-                        shutil.move(diretoryfile, 'Registro Suspenso/Exclusos')
+                        pass
                         sleep(2)
+                    shutil.move(diretoryfile, 'Registro Suspenso/Exclusos')
 
 
 

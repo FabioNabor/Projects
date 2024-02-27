@@ -1,6 +1,6 @@
 Scpc:
-ScpcUser = *******
-ScpcPassword = *******
+ScpcUser = 36541
+ScpcPassword = 42684258
 
 Serasa:
 SerasaUser = *******
