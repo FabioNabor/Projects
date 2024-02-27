@@ -8,7 +8,7 @@ def configCard(card):
         return f"{card[0:4]}.{card[4:8]}.{card[8:12]}.{card[12:16]}"
     if sizecard <= 12:
         zeros = 12 - sizecard
-        card = f'{'0'*zeros}{card}'
+        card = f'{"0"*zeros}{card}'
         return f"{card[0:4]}.{card[4:9]}.{card[9:12]}"
 
 def verificyExistFile(namefile):

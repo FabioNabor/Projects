@@ -16,7 +16,7 @@ def usersLoading():
                    'SpcChave': None,
                    'SpcPassword': None}
     try:
-        with open('Load.txt', 'r') as load:
+        with open('LoadSettings.txt', 'r') as load:
             for rows in load:
                 if rows != '':
                     rowVector = rows.split('=')
@@ -28,7 +28,7 @@ def usersLoading():
                     except:
                         pass
     except:
-        with open('Load.txt', 'wt+') as load:
+        with open('LoadSettings.txt', 'wt+') as load:
             for d in informacoes:
                 if d == 'VAZIO' or d == 'ENTER':
                     load.write('\n')
@@ -36,19 +36,22 @@ def usersLoading():
                     load.write(f'{d}\n')
                 else:
                     load.write(f'{d} = *******\n')
-        raise Exception('Preencha as informações de Login no arquivo Load.txt')
+        raise Exception('Preencha as informações de Login no arquivo \nLoadSettings.txt')
     return informacoes
 
 
 def createDiretory():
-    try:
-        os.makedirs('RETORNOS/BAIXA')
-    except:
-        pass
-    try:
-        os.makedirs('REGISTRO SUSPENSO/Enviar')
-    except:
-        pass
+    diretorys = [
+        'Retornos/Baixa',
+        'Registro Suspenso/Enviar',
+        'Registro Suspenso/Enviados',
+        'Registro Suspenso/Exclusos'
+    ]
+    for diretory in diretorys:
+        try:
+            os.makedirs(diretory)
+        except:
+            pass
 
 
 

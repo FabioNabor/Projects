@@ -1,0 +1,12 @@
+Scpc:
+ScpcUser = *******
+ScpcPassword = *******
+
+Serasa:
+SerasaUser = *******
+SerasaPassword = *******
+
+Spc-Brasil:
+SpcUser = *******
+SpcChave = *******
+SpcPassword = *******

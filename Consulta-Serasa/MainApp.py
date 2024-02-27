@@ -8,13 +8,13 @@ from time import sleep
 import pandas as pd
 import SubJudice as sj
 import FileLoad
+import shutil
 
-duser = FileLoad.usersLoading()
-FileLoad.createDiretory()
-MostrarNavegador = True
+
 
 def scpcBaixa(filename):
-    scpc = isw('https://www.scpc.inf.br/cgi-bin/spcnweb?HTML_PROGRAMA=md000001.int#', MostrarNavegador)
+    duser = FileLoad.usersLoading()
+    scpc = isw('https://www.scpc.inf.br/cgi-bin/spcnweb?HTML_PROGRAMA=md000001.int#', False)
     #FAZENDO LOGIN NO SITE
     scpc.writeText('//*[@id="HTML_COD"]', duser['ScpcUser'].strip())
     scpc.writeText('//*[@id="HTML_SEN"]', duser['ScpcPassword'].strip())
@@ -42,7 +42,8 @@ def scpcBaixa(filename):
 
         #CORRIGINDO O CPF
         t = 11 - len(cpf)
-        cpf = f'{'0' * t}{cpf}'
+        zeros = '0'*t
+        cpf = f'{zeros}{cpf}'
 
         #INDO ATÉ PESSOA FISICA PARA REALIZAR CONSULTA
         scpc.exitIframe()
@@ -120,11 +121,11 @@ def scpcBaixa(filename):
 
     filename = os.path.basename(filename)
     listclients.to_excel(F'RETORNOS/BAIXA/{filename}', index=False)
-    return F'RETORNOS/BAIXA/{filename}'
+    return F'Retornos/Baixa/{filename}'
 
 def serasaBaixa(filename):
-    print("SERASA")
-    serasa = isw('https://empresas.serasaexperian.com.br/meus-produtos/login', MostrarNavegador)
+    duser = FileLoad.usersLoading()
+    serasa = isw('https://empresas.serasaexperian.com.br/meus-produtos/login', False)
     #Login
     serasa.writeText('//*[@id="loginUser"]', duser['SerasaUser'].strip())
     serasa.writeText('//*[@id="loginPassword"]', duser['SerasaPassword'].strip())
@@ -147,8 +148,9 @@ def serasaBaixa(filename):
 
         card = str(card).strip()
 
-        t = 11-len(cpf)
-        cpf = f'{'0'*t}{cpf}'
+        t = 11 - len(cpf)
+        zeros = '0' * t
+        cpf = f'{zeros}{cpf}'
 
         serasa.clearBoxTheText('//*[@id="debtorDocument"]')
         serasa.writeText('//*[@id="debtorDocument"]', cpf)
@@ -182,8 +184,8 @@ def serasaBaixa(filename):
     clientinexcel.to_excel(filename, index=False)
 
 def spcBaixa(filename):
-    print("Spc-Brasil")
-    spc = isw('https://sistema.spc.org.br/spc/controleacesso/autenticacao/entry.action;jsessionid=5ed367a9-15f7-4720-bfca-eff5e8f1875a_node186', MostrarNavegador)
+    duser = FileLoad.usersLoading()
+    spc = isw('https://sistema.spc.org.br/spc/controleacesso/autenticacao/entry.action;jsessionid=5ed367a9-15f7-4720-bfca-eff5e8f1875a_node186', False)
 
     #login
     spc.writeText('//*[@id="j_username"]', duser['SpcUser'].strip())
@@ -208,8 +210,8 @@ def spcBaixa(filename):
         spc.clickElement('//*[@id="m50"]/div/a')
 
         t = 11 - len(cpf)
-        print(t)
-        cpf = f'{'0' * t}{cpf}'
+        zeros = '0' * t
+        cpf = f'{zeros}{cpf}'
 
         spc.writeText('//*[@id="numeroDocumento"]', cpf)
         spc.clickElement('//*[@id="conteudoInsumo"]/tbody/tr[2]/td/table/tbody/tr/td/input[1]')
@@ -242,22 +244,96 @@ def spcBaixa(filename):
 
     listclient.to_excel(filename, index=False)
 
+def downRegister():
+    duser = FileLoad.usersLoading()
+    diretory = 'Registro Suspenso/Enviados'
+    files = os.listdir(diretory)
+    if files != []:
+        scpc = isw('https://www.scpc.inf.br/cgi-bin/spcnweb?HTML_PROGRAMA=md000001.int#', False)
+        # FAZENDO LOGIN NO SITE
+        scpc.writeText('//*[@id="HTML_COD"]', duser['ScpcUser'].strip())
+        scpc.writeText('//*[@id="HTML_SEN"]', duser['ScpcPassword'].strip())
+        scpc.clickElement('//*[@id="HTML_BOTAO"]')
+
+        # INDO ATÉ A AREA DE MANUTENÇOES
+        scpc.clickElement('//*[@id="menu_principal_spcn"]')
+        scpc.clickElement('//*[@id="sm02_SPCN"]/a')
+
+        # ACESSANDO O IFRAME
+        scpc.entryIframe('//*[@id="menu_vertical"]')
+        for fileregister in files:
+            diretoryfile = os.path.join(diretory, fileregister)
+            fileregister = sj.getRegistro(diretoryfile)
+            cpf = fileregister['CPF']
+            contrato = fileregister['CONTRATO']
+            valor = fileregister['VALOR']
+
+            # AS VAZES OCORRE ALGUM ERRO QUANDO CLICAMOS EM PESSOA FISICA FIZ UM LOOP PARA REPETIR O PROCESSO ATÉ CONSEGUIR FAZER A CONSULTA
+            while True:
+                try:
+                    # PREENCHENDO O CPF
+                    scpc.entryIframe('//*[@id="TelaNovo"]')
+                    scpc.loadingElement('//*[@id="cpf"]', 5)
+                    scpc.web.find_element(By.XPATH, '//*[@id="cpf"]').send_keys(cpf)
+                    break
+                except:
+                    scpc.exitIframe()
+                    scpc.entryIframe('//*[@id="menu_vertical"]')
+                    scpc.clickElement('//*[@id="form_001"]/a')
+                    scpc.exitIframe()
+                    sleep(5)
+
+            # CLICANDO PARA REALIZAR A CONSULTA
+            scpc.clickElement('//*[@id="btn_pesquisar"]')
+
+            # PEGANDO TODAS RESTRIÇOES QUE O CLIENTE POSSUI
+            incluso = scpc.getListElement(By.XPATH, '//*[@id="tbl_fis"]/tbody/tr')
+
+            for i in incluso:
+
+                # CASO ELE NÃO TENHA NENHUMA RESTRIÇÃO VAMOS PARA O PROXIMO CARTÃO
+                if str(i.text) == 'Nenhum registro encontrado':
+                    shutil.move(diretoryfile, 'Registro Suspenso/Exclusos')
+                    continue
+
+                # PEGANDO O NUMERO DO CONTRATO INCLUSO
+                cardelement = i.find_element(By.XPATH, './td[5]').text
+                valueelement = i.find_element(By.XPATH, './td[5]').text
+
+                # CASO FOR O CONTRATO QUE QUEREMOS EXCLUIR VAMOS EXCLUIR
+                if et.configCard(cardelement) == contrato.strip() and valueelement == valor:
+                    i.find_element(By.XPATH, './td[9]').click()
+                    scpc.clickElement('//*[@id="btn_excluir"]')
+                    scpc.clickElement('/html/body/div[3]/div/div[3]/button[1]')
+                    sleep(4)
+
+                    try:
+                        scpc.loadingElement('/html/body/div[3]/div/div[2]', 10)
+                        regs = str(scpc.web.find_element(By.XPATH, '/html/body/div[3]/div/div[2]').text).strip()
+
+                        # VERICICANDO SE NÃO É UM CASO DE RESGISTRO SUSPENSO
+                        # CASO FOR VAMOS GERAR O REGISTRO SUSPENSO PARA SER ENVIADO PARA O ÓRGÃO
+                        if 'EXCLUSAO NAO PERMITIDA, REGISTRO SUSPENSO' in regs:
+                            scpc.clickElement('/html/body/div[3]/div/div[1]/button')
+                    except:
+                        shutil.move(diretoryfile, 'Registro Suspenso/Exclusos')
+                        sleep(2)
 
 
 
-
-try:
-    saveret = filedialog.askopenfilename(defaultextension=".xlsx", filetypes=[('Validação de Baixa', '*.xlsx')])
-    if saveret.strip() == '':
-        raise Exception("Nenhum Arquivo .xlsx selecionado!")
-    filename = scpcBaixa(saveret)
-    serasaBaixa(filename)
-    spcBaixa(filename)
-    messagebox.showinfo('DownOrgãos', f'Finalizado com sucesso\n Arquivo Salvo Em:\n{filename}')
-except Exception as e:
-    messagebox.showerror('DownOrgãos', f'{e}')
-
-
+if __name__ == '__main__':
+    try:
+        FileLoad.createDiretory()
+        FileLoad.usersLoading()
+        saveret = filedialog.askopenfilename(defaultextension=".xlsx", filetypes=[('Validação de Baixa', '*.xlsx')])
+        if saveret.strip() == '':
+            raise Exception("Nenhum Arquivo .xlsx selecionado!")
+        filename = scpcBaixa(saveret)
+        serasaBaixa(filename)
+        spcBaixa(filename)
+        messagebox.showinfo('DownOrgãos', f'Finalizado com sucesso\n Arquivo Salvo Em:\n{filename}')
+    except Exception as e:
+        messagebox.showerror('DownOrgãos', f'{e}')
 
 
 
