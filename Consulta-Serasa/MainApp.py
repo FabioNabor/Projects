@@ -3,6 +3,8 @@ from tkinter import filedialog
 from tkinter import messagebox
 from IAdcancend import initSeWeb as isw
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import Excentions as et
 from time import sleep
 import pandas as pd
@@ -14,7 +16,7 @@ import shutil
 
 def scpcBaixa(filename):
     duser = FileLoad.usersLoading()
-    scpc = isw('https://www.scpc.inf.br/cgi-bin/spcnweb?HTML_PROGRAMA=md000001.int#', False)
+    scpc = isw('https://www.scpc.inf.br/cgi-bin/spcnweb?HTML_PROGRAMA=md000001.int#', True)
     #FAZENDO LOGIN NO SITE
     scpc.writeText('//*[@id="HTML_COD"]', duser['ScpcUser'].strip())
     scpc.writeText('//*[@id="HTML_SEN"]', duser['ScpcPassword'].strip())
@@ -86,24 +88,19 @@ def scpcBaixa(filename):
                 result = True
 
         for i in incluso:
-
-            #CASO ELE NÃO TENHA NENHUMA RESTRIÇÃO VAMOS PARA O PROXIMO CARTÃO
-            if str(i.text) == 'Nenhum registro encontrado':
-                print(f"Cliente {cpf}, não possui restrição")
-                listclients.loc[listclients['N° CARTÃO'] == card, 'SCPC'] = 'EXCLUSO'
-                continue
-
             #PEGANDO O NUMERO DO CONTRATO INCLUSO
-            td = i.find_element(By.XPATH, './td[5]').text
+            while True:
+                try:
+                    td = i.find_element(By.XPATH, './td[5]').text
+                    break
+                except:
+                    print('Não encontrado /td[5]')
+                    sleep(1)
 
-            if len(td.strip()) == 14:
-                cardinc = td.strip()
-            else:
-                cardinc = td.strip().lstrip('0')
-                card = card.lstrip('0')
 
             #CASO FOR O CONTRATO QUE QUEREMOS EXCLUIR VAMOS EXCLUIR
-            if cardinc == card:
+            if et.configCard(td) == et.configCard(card):
+                sleep(0.5)
                 i.find_element(By.XPATH, './td[9]').click()
                 scpc.clickElement('//*[@id="btn_excluir"]')
                 scpc.clickElement('/html/body/div[3]/div/div[3]/button[1]')
@@ -127,16 +124,19 @@ def scpcBaixa(filename):
                         sj.createRegistro(cpfid, nome, card, valor)
                         continue
 
-                except:
-                    if result:
+                except Exception as e:
+                    print("mais de um")
+                    if result != 1:
                         listclients.loc[listclients['N° CARTÃO'] == card, 'SCPC'] = 'VERIFICAR'
                         print('MAIS DE UMA RESTRIÇÃO COM A EMPRESA')
                         continue
                     else:
+                        print("normal")
                         listclients.loc[listclients['N° CARTÃO'] == card, 'SCPC'] = 'EXCLUSO'
                         sleep(2)
             else:
                 listclients.loc[listclients['N° CARTÃO'] == card, 'SCPC'] = 'VERIFICAR'
+                sleep(2)
 
     filename = os.path.basename(filename)
     listclients.to_excel(F'RETORNOS/BAIXA/{filename}', index=False)
@@ -357,6 +357,7 @@ def downRegister():
 
 
 
+
 if __name__ == '__main__':
     try:
         FileLoad.createDiretory()
@@ -366,10 +367,12 @@ if __name__ == '__main__':
             raise Exception("Nenhum Arquivo .xlsx selecionado!")
         filename = scpcBaixa(saveret)
         serasaBaixa(filename)
-        spcBaixa(filename)
+        # spcBaixa(filename)
         messagebox.showinfo('DownOrgãos', f'Finalizado com sucesso\n Arquivo Salvo Em:\n{filename}')
     except Exception as e:
         messagebox.showerror('DownOrgãos', f'{e}')
+
+
 
 
 

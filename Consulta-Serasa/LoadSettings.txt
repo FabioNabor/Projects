@@ -3,10 +3,10 @@ ScpcUser = 36541
 ScpcPassword = 42684258
 
 Serasa:
-SerasaUser = *******
-SerasaPassword = *******
+SerasaUser = 57729563
+SerasaPassword = M@ya6842
 
 Spc-Brasil:
-SpcUser = *******
-SpcChave = *******
-SpcPassword = *******
+SpcUser = 103584514
+SpcChave = @Nena1012
+SpcPassword = @Bola1012

@@ -65,7 +65,6 @@ class initSeWeb():
         self.onIframe = False
         while True:
             try:
-                print('tentando')
                 initSeWeb._loadingWeb(self, xpatch)
                 iframe = self.web.find_element(By.XPATH, xpatch)
                 self.web.switch_to.frame(iframe)
