@@ -3,8 +3,6 @@ from tkinter import filedialog
 from tkinter import messagebox
 from IAdcancend import initSeWeb as isw
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 import Excentions as et
 from time import sleep
 import pandas as pd
@@ -31,10 +29,11 @@ def scpcBaixa(filename):
 
     #ABRINDO EXCEL COM OS CARTÕES
     listclients = pd.read_excel(filename)
-    cards = listclients['N° CARTÃO']
 
     #INTERANDO SOBRE CADA CARTÃO
-    for card in cards:
+    vcards = listclients.loc[listclients['SCPC'].str.strip() == 'MANUAL', 'N° CARTÃO'].tolist()
+    print(vcards)
+    for card in vcards:
         cpf = str(listclients.loc[listclients['N° CARTÃO'] == card, 'CPF'].values[0]).lstrip('0').replace('.', '').replace('-','')
         manual = str(listclients.loc[listclients['N° CARTÃO'] == card, 'SCPC'].values[0]).strip()
 
@@ -75,17 +74,24 @@ def scpcBaixa(filename):
         incluso = scpc.getListElement(By.XPATH, '//*[@id="tbl_fis"]/tbody/tr')
 
         result = False
-
+        listabcard = 0
+        stop = False
         for row in incluso:
-            listabcard = 0
-            if str(row.text) != 'Nenhum registro encontrado':
+            print(row.text)
+
+            if 'Nenhum registro encontrado' not in str(row.text).strip():
+                stop = True
                 bcard = str(row.find_element(By.XPATH, './td[3]').text).strip()
                 if 'BRASIL CARD ADM DE CARTAO CREDITO' in bcard:
                     listabcard +=1
-            else:
-                continue
-            if listabcard > 1:
-                result = True
+
+        if stop != True:
+            listclients.loc[listclients['N° CARTÃO'] == card, 'SCPC'] = 'EXCLUSO'
+            continue
+
+        if listabcard > 1:
+            listclients.loc[listclients['N° CARTÃO'] == card, 'SCPC'] = 'VERIFICAR'
+            continue
 
         for i in incluso:
             #PEGANDO O NUMERO DO CONTRATO INCLUSO
@@ -144,7 +150,7 @@ def scpcBaixa(filename):
 
 def serasaBaixa(filename):
     duser = FileLoad.usersLoading()
-    serasa = isw('https://empresas.serasaexperian.com.br/meus-produtos/login', False)
+    serasa = isw('https://empresas.serasaexperian.com.br/meus-produtos/login', True)
     #Login
     serasa.writeText('//*[@id="loginUser"]', duser['SerasaUser'].strip())
     serasa.writeText('//*[@id="loginPassword"]', duser['SerasaPassword'].strip())
@@ -156,14 +162,13 @@ def serasaBaixa(filename):
 
     clientinexcel = pd.read_excel(filename)
 
-    cards = clientinexcel['N° CARTÃO']
+    # INTERANDO SOBRE CADA CARTÃO
+    vcards = clientinexcel.loc[clientinexcel['SERASA'].str.strip() == 'MANUAL', 'N° CARTÃO'].tolist()
+    for i in vcards:
+        print(i)
 
-    for card in cards:
+    for card in vcards:
         cpf = str(clientinexcel.loc[clientinexcel['N° CARTÃO'] == card, 'CPF'].values[0]).lstrip('0').replace('.', '').replace('-','')
-        manual = str(clientinexcel.loc[clientinexcel['N° CARTÃO'] == card, 'SERASA'].values[0]).strip()
-
-        if manual != 'MANUAL':
-            continue
 
         card = str(card).strip()
 
@@ -183,7 +188,6 @@ def serasaBaixa(filename):
                 clientinexcel.loc[clientinexcel['N° CARTÃO'] == card, 'SERASA'] = 'EXCLUSO'
                 continue
         except:
-            print('passado')
             pass
 
         inclusoes = serasa.getListElement(By.XPATH, '//*[@id="__next"]/main/div/article/div/table/tbody/tr')
@@ -192,10 +196,15 @@ def serasaBaixa(filename):
             td = q.find_element(By.XPATH, './td[3]').text
             quantidade+=1
 
+        if quantidade > 1:
+            clientinexcel.loc[clientinexcel['N° CARTÃO'] == card, 'SERASA'] = 'VERIFICAR'
+            continue
+
         for incluso in inclusoes:
             td = incluso.find_element(By.XPATH, './td[3]').text
-            if et.configCard(td) == card:
-                incluso.find_element(By.XPATH, '//*[@id="__next"]/main/div/article/div/table/tbody/tr/td[7]/div/button[1]').click()
+            if et.configCard(td) == et.configCard(card):
+                incluso.find_element(By.XPATH, './td[7]/div/button[1]').click()
+                sleep(15)
                 serasa.clickElement('//*[@id="modal"]/div[1]/div/div/div[2]/div/div/div[2]/button')
                 serasa.clickElement('/html/body/div[2]/div[1]/div/div/div[2]/form/div[1]/label[13]/input')
                 serasa.clickElement('//*[@id="modal"]/div[1]/div/div/div[2]/form/div[2]/div[2]')
@@ -211,7 +220,7 @@ def serasaBaixa(filename):
 
 def spcBaixa(filename):
     duser = FileLoad.usersLoading()
-    spc = isw('https://sistema.spc.org.br/spc/controleacesso/autenticacao/entry.action;jsessionid=5ed367a9-15f7-4720-bfca-eff5e8f1875a_node186', False)
+    spc = isw('https://sistema.spc.org.br/spc/controleacesso/autenticacao/entry.action;jsessionid=5ed367a9-15f7-4720-bfca-eff5e8f1875a_node186', True)
 
     #login
     spc.writeText('//*[@id="j_username"]', duser['SpcUser'].strip())
@@ -224,13 +233,9 @@ def spcBaixa(filename):
     spc.clickElement('//*[@id="accordion2"]/li[8]/a')
 
     listclient = pd.read_excel(filename)
-    cardlist = listclient['N° CARTÃO']
-    for cardc in cardlist:
+    vcards = listclient.loc[listclient['SPC'].str.strip() == 'MANUAL', 'N° CARTÃO'].tolist()
+    for cardc in vcards:
         cpf = str(listclient.loc[listclient['N° CARTÃO'] == cardc, 'CPF'].values[0]).lstrip('0').replace('.', '').replace('-','')
-        manual = str(listclient.loc[listclient['N° CARTÃO'] == cardc, 'SPC'].values[0]).strip()
-
-        if manual != 'MANUAL':
-            continue
 
         spc.clickElement('//*[@id="accordion2"]/li[8]/ul/li/a')
         spc.clickElement('//*[@id="m50"]/div/a')
@@ -252,6 +257,19 @@ def spcBaixa(filename):
 
         spc.loadingElement('//*[@id="dataGrid"]/tbody', 100)
         list = spc.getListElement(By.XPATH, '//*[@id="dataGrid"]/tbody')
+
+        stop = 0
+        for l in list:
+            td = l.find_elements(By.XPATH, './tr')
+            for tds in td:
+                cardTD = tds.find_element(By.XPATH, './td[7]')
+                if card != None:
+                    stop +=1
+
+        if stop > 1:
+            listclient.loc[listclient['N° CARTÃO'] == cardc, 'SPC'] = 'VERIFICAR'
+            continue
+
         for l in list:
             td = l.find_elements(By.XPATH, './tr')
             for tds in td:
@@ -367,7 +385,7 @@ if __name__ == '__main__':
             raise Exception("Nenhum Arquivo .xlsx selecionado!")
         filename = scpcBaixa(saveret)
         serasaBaixa(filename)
-        # spcBaixa(filename)
+        spcBaixa(filename)
         messagebox.showinfo('DownOrgãos', f'Finalizado com sucesso\n Arquivo Salvo Em:\n{filename}')
     except Exception as e:
         messagebox.showerror('DownOrgãos', f'{e}')

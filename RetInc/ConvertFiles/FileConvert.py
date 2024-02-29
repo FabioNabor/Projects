@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 import openpyxl as op
-from tkinter import messagebox,
+from tkinter import messagebox
 import shutil
 
 erros = {0 : 'REGISTRO AR - ASSINADO',
@@ -184,7 +184,7 @@ def config_card(cartao):
         return f"{cartao[0:4]}.{cartao[4:8]}.{cartao[8:12]}.{cartao[12:16]}"
     else:
         return cartao
-def lerSerasa(filediretory):
+def lerSerasa(filediretory, save):
     size = (os.path.getsize(filediretory)) / (1024 * 1024)
     remessa = None
     cards = []
@@ -196,18 +196,16 @@ def lerSerasa(filediretory):
                 cards.append(row[438:454].strip())
     return remessa, cards, size
 
-def lerRetSerasa(remessadiretory, retdiretory):
-    remessa, cards, size = lerSerasa(remessadiretory)
+def lerRetSerasa(retdiretory):
     with open(retdiretory, 'r') as fileret:
         rows = fileret.readlines()
-        remessaret = rows[0][117:125]
         vencimentof = (datetime.strptime(rows[1][8:16].strip(), "%Y%m%d")).strftime("%d-%m-%Y")
         excel = op.Workbook()
         a = excel['Sheet']
         a.append(['NOME', 'CPF', 'DATA DE NASCIMENTO ', 'CARTÃO', 'VALOR', 'VENCIMENTO', 'STATUS'])
 
         for row in rows:
-            if remessa == remessaret and '1' in row[0:1]:
+            if '1' in row[0:1]:
                 nome = row[105:175].rstrip()
                 cpf = F'{row[37:40]}.{row[40:43]}.{row[43:46]}-{row[46:48]}'  # 48
                 cartao = row[438:454].rstrip()
@@ -229,11 +227,19 @@ def lerRetSerasa(remessadiretory, retdiretory):
         except Exception as e:
             pass
 
-        excel.save(f'Retornos/VENCIMENTO {vencimentof}/SERASA {vencimentof}.xlsx')
-        diretory = os.path.join('Retornos/Vencimento', f'Vencimento {vencimentof}.xlsx')
-        messagebox.showinfo('MoonInc', f'Salvo em {diretory}')
+        filename = os.path.basename(retdiretory)
+        saved = os.path.dirname(retdiretory)
+        s = f'{saved}/{filename}.xlsx'
+        excel.save(s)
 
 
 
+
+
+patch = r'C:\Users\fabio.prado\Desktop\INCLUSOES'
+lista = os.listdir(patch)
+for i in lista:
+    arquivo = os.path.join(patch, i)
+    lerRetSerasa(arquivo)
 
 
