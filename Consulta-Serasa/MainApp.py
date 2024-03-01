@@ -204,7 +204,6 @@ def serasaBaixa(filename):
             td = incluso.find_element(By.XPATH, './td[3]').text
             if et.configCard(td) == et.configCard(card):
                 incluso.find_element(By.XPATH, './td[7]/div/button[1]').click()
-                sleep(15)
                 serasa.clickElement('//*[@id="modal"]/div[1]/div/div/div[2]/div/div/div[2]/button')
                 serasa.clickElement('/html/body/div[2]/div[1]/div/div/div[2]/form/div[1]/label[13]/input')
                 serasa.clickElement('//*[@id="modal"]/div[1]/div/div/div[2]/form/div[2]/div[2]')

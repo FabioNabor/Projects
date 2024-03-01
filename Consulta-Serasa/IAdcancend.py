@@ -61,6 +61,10 @@ class initSeWeb():
         initSeWeb._loadingWeb(self, xpatch)
         return self.web.find_elements(by, xpatch)
 
+    def getText(self, xpatch):
+        initSeWeb.loadingElement(self, xpatch, 12)
+        return self.web.find_element(By.XPATH, xpatch)
+
     def entryIframe(self, xpatch:str):
         self.onIframe = False
         while True:

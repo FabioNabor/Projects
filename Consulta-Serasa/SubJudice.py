@@ -1,14 +1,12 @@
 import os
 from docx import Document
-import MainApp as mp
-from tkinter import messagebox
+import FileLoad
 
-# Abrir o documento do Word existente
 
 diretorysave = r'Registro Suspenso\Enviar'
 def createRegistro(cpf, name, card, value):
-    print('GERANDO REGISTRO SUSPENSO...')
     doc = Document('modelregistro.docx')
+    FileLoad.createDiretory()
     for paragraph in doc.paragraphs:
         if 'CPFCLIENTE' in paragraph.text:
             paragraph.text = paragraph.text.replace('CPFCLIENTE', cpf)
@@ -22,7 +20,6 @@ def createRegistro(cpf, name, card, value):
     filename = f'{name} - {card}.docx'
     if filename not in files:
         doc.save(f'{diretorysave}\\{filename}')
-        print('REGISTRO SUSPENSO GERADO...')
 
 def getRegistro(diretory):
     doc = Document(diretory)
@@ -42,12 +39,6 @@ def getRegistro(diretory):
                 getreturn['VALOR'] = inf
     return getreturn
 
-if __name__ == "__main__":
-    try:
-        mp.downRegister()
-        messagebox.showinfo('DownOrgãos', f'Registros Validados com Sucesso!')
-    except Exception as e:
-        messagebox.showerror('DownOrgãos', f'{e}')
 
 
 
