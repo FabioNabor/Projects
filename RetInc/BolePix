@@ -1,0 +1,57 @@
+name = "JONATHAN STANLEY MARQUES DA SILVA CAMPOS"
+
+def formatar_cpf(cpf):
+    return f'{cpf[0:3]}.{cpf[3:6]}.{cpf[6:9]}-{cpf[9:11]}'
+
+def corrigir_cpf(cpf):
+    cpf = str(cpf)
+    padrao = 11-len(cpf)
+    final = f"{"0"*padrao}{cpf}"
+    return formatar_cpf(final)
+
+
+
+def forma_primeira(name):
+    name = str(name)
+    if " DA " in name: name = name.replace(" DA ", " ")
+    if " DE " in name: name = name.replace(" DE ", " ")
+    vectorN = str(name).split()
+    tamanho = len(vectorN)-1
+    nome_final = ""
+    for v,_ in enumerate(vectorN):
+        if v == 0:
+            nome_final = nome_final + vectorN[0]
+        elif v == tamanho: 
+            nome_final = nome_final + " " + vectorN[tamanho] 
+        else:
+            nome_final = nome_final + " " + vectorN[v][0]
+    return nome_final
+
+def forma_segunda(name):
+    if len(name) > 30:
+        name = name[0:30]
+    return name
+
+def forma_terceira(name):
+    if len(name) > 29:
+        name = name[0:29]
+    return name
+
+
+
+print(forma_primeira(name))
+        
+
+
+
+import pandas as pd
+
+
+abrindo = pd.read_excel("PagamentosTotais.xlsx")
+
+abrindo["CPF"] = abrindo["CPF"].apply(corrigir_cpf)
+abrindo["KeyValue 1"] = abrindo["Nome"].apply(forma_primeira)
+abrindo["KeyValue 2"] = abrindo["Nome"].apply(forma_segunda)
+abrindo["KeyValue 3"] = abrindo["Nome"].apply(forma_terceira)
+
+abrindo.to_excel("Key1.xlsx", index=False)
