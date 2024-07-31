@@ -11,9 +11,9 @@ fusobrasilia = pytz.timezone('America/Sao_Paulo')
 
 
 def getLastEmail():
-    imap_server = 'mail.brasilcard.net'
-    emaill = 'orgaosrestritivos@brasilcard.net'
-    password = 'Azsxdcf%5'
+    imap_server = ''
+    emaill = ''
+    password = ''
 
     imap = imaplib.IMAP4_SSL(imap_server)
     imap.login(emaill, password)
